@@ -1,3 +1,15 @@
+# project specific
+docs/
+data/__MACOSX
+data/public_test.csv
+data/public_train.csv
+sbc_venv/
+simp_binary_classify/simp_binary_classify.Rproj
+simp_binary_classify/.Rhistory
+simp_binary_classify/scratch.R
+simp_binary_classify/scratch.py
+graphics/*.png
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,3 +139,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.Rproj.user
