@@ -9,7 +9,7 @@ from pyspark.ml.tuning import TrainValidationSplitModel, Param
 from multiprocessing import cpu_count
 from simp_binary_classify.spark import spark
 
-def gen_model(model_train: pyspark.sql.DataFrame):
+def gen_model(model_train: pyspark.sql.DataFrame, num_splits: int):
     lr = LogisticRegression()
     grid = ParamGridBuilder().addGrid(lr.maxIter, [0, 1]).build()
     evaluator = BinaryClassificationEvaluator()
