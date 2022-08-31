@@ -30,7 +30,7 @@ def assemble_features(train_data):
         model_training.createOrReplaceTempView("model_train")
         testDF = spark.sql("SELECT * FROM test")
         model_testing = assembler.transform(testDF)
-        model_testing.createOrRepalceTempView("model_testing")
+        model_testing.createOrReplaceTempView("model_testing")
         model_test = spark.sql("SELECT row_num as id, features from model_testing")
         model_test.createOrReplaceTempView("model_test")
     # run
