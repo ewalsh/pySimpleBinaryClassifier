@@ -15,6 +15,7 @@ if __name__ == "__main__":
 
         # assemble the feature data sets
         assemble_features(eda.train_data)
+        model_train = spark.sql("SELECT * FROM model_train")
 
         spark.sql("SELECT * FROM train").show()
     else:

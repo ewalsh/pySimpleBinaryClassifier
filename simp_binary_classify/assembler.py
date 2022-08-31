@@ -4,7 +4,8 @@ from simp_binary_classify.spark import spark
 
 
 def assemble_features(train_data):
-    def __init__(self):
+    # create assembler function
+    def gen_assembly():
         # get transformed train and test data
         yvals_DF = spark.createDataFrame(
             pd.DataFrame(
@@ -16,9 +17,7 @@ def assemble_features(train_data):
         )
         # add to spark sql
         yvals_DF.createOrReplaceTempView("yvals")
-
-    # create assembler function
-    def gen_assembly():
+        #
         trainDF = spark.sql("SELECT * FROM train")
         assembler = VectorAssembler(
             inputCols=trainDF.columns[1:],
