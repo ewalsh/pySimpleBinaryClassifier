@@ -3,7 +3,7 @@ docs/
 data/__MACOSX
 data/public_test.csv
 data/public_train.csv
-sbc_venv/
+#sbc_venv/
 simp_binary_classify/simp_binary_classify.Rproj
 simp_binary_classify/.Rhistory
 simp_binary_classify/scratch.R
