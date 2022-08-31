@@ -1,6 +1,6 @@
 from simp_binary_classify.io import get_data
 import pandas as pd
-from plotnine import ggplot, geom_density, geom_histogram, aes, facet_wrap, ggtitle
+from plotnine import ggplot, geom_density, geom_histogram, aes, facet_wrap, ggtitle, geom_point, stat_smooth
 from typing import List, Set
 from scipy.stats import shapiro
 from sys import float_info
@@ -41,6 +41,18 @@ class EDA:
     # instance variables
     def __init__(self):
         print("starting expoloratory data analysis")
+
+    # plot scatter
+    def gen_scatter(self, cnm: str):
+        df_sub = self.train_data.loc[:,["class_col",cnm]]
+        plot_nm = cnm + " Scatter"
+        p = (
+            (ggplot(df_sub, aes(y="class_col", x=cnm)))
+            + geom_point()
+            + stat_smooth()
+            + ggtitle(plot_nm)
+        )
+        p.save("graphics/" + plot_nm + ".png")
 
     # function to check if variable is likely categorical
     def check_categorical(self, data: Set):
@@ -409,8 +421,8 @@ class EDA:
                                     cnm + "_trunc_cat" + " Used",
                                 )
                                 # checking
-                                print("CHECKING TRUNCATION")
-                                print(trunc_check[1].data.unique())
+                                # print("CHECKING TRUNCATION")
+                                # print(trunc_check[1].data.unique())
                                 # and original for reference
                                 self.gen_hist(pdat, cnm + "_cat" + " For Reference Only")
                             case False:

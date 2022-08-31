@@ -1,27 +1,16 @@
 from simp_binary_classify.eda import EDA
-# from multiprocessing import Process
 from simp_binary_classify.spark import spark
+from simp_binary_classify.assembler import assemble_features
 
 if __name__ == "__main__":
-    # initiate processes
-    # processes = []
     # initial EDA
     eda = EDA()
     # loop over variables
     for nm in eda.col_nms:
+        eda.gen_scatter(nm)
         eda.plot_dist(nm)
-        # p = Process(target=eda.plot_dist, args=(nm, ))
-        # p.start()
-        # processes.append(p)
-        # eda = EDA()
 
-
-    # for p in processes:
-    #     p.join()
+    # assemble the feature data sets
+    assemble_features(eda.train_data)
 
     spark.sql("SELECT * FROM train").show()
-
-# def __main__():
-    # from simp_binary_classify.eda import EDA
-    # from multiprocessing import Process
-# print("hello")
