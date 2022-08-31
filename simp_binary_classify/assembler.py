@@ -27,7 +27,7 @@ def assemble_features(train_data):
         model_training = assembler.transform(trainDF)
         model_training.createOrReplaceTempView("model_training")
         modelDataDF = spark.sql("SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num")
-        model_training.createOrReplaceTempView("model_train")
+        modelDataDF.createOrReplaceTempView("model_train")
         testDF = spark.sql("SELECT * FROM test")
         model_testing = assembler.transform(testDF)
         model_testing.createOrReplaceTempView("model_testing")

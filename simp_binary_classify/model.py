@@ -7,6 +7,7 @@ from pyspark.ml.linalg import Vectors
 from pyspark.ml.tuning import TrainValidationSplit, ParamGridBuilder
 from pyspark.ml.tuning import TrainValidationSplitModel, Param
 from multiprocessing import cpu_count
+from simp_binary_classify.spark import spark
 
 def gen_model(model_train: pyspark.sql.DataFrame):
     lr = LogisticRegression()
@@ -18,10 +19,7 @@ def gen_model(model_train: pyspark.sql.DataFrame):
                                parallelism=cpu_count(),\
                                seed=29)
     #
-
-tvsModel = tvs.fit(model_train)
-
-tvsModel.getTrainRatio()
-0.75
-
-tvsModel.validationMetrics
+    model_train = spark.sql("SELECT * FROM model_train")
+    tvsModel = tvs.fit(model_train)
+    tvsModel.getTrainRatio()
+    tvsModel.validationMetrics
