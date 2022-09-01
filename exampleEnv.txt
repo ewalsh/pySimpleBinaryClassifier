@@ -8,4 +8,6 @@ num_splits=5
 category_convert=True
 scale_data=False
 cat_transform=False
-model="svm"
+model="gbt"
+gbt_depth=45
+gbt_learn_rt=0.025
