@@ -9,5 +9,5 @@ category_convert=True
 scale_data=False
 cat_transform=False
 model="gbt"
-gbt_depth=45
+gbt_depth=10
 gbt_learn_rt=0.025
