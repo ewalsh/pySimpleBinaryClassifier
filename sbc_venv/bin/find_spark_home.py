@@ -1,4 +1,4 @@
-#!/home/edmund/Projects/pySimpleBinaryClassifier/sbc_venv/bin/python
+#!/home/admin/Projects/pySimpleBinaryClassifier/sbc_venv/bin/python3.10
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
