@@ -163,7 +163,7 @@ def gen_model(model_train, num_splits: int = 3):
                 for x in subRows:
                     # print(x.features)
                     train_list.append(sparse_to_labeledpt(x.label, x.features))
-                svm = SVMWithSGD.train(sc.parallelize(train_list), iterations=nfolds)
+                svm = SVMWithSGD.train(sc.parallelize(train_list), iterations=nfolds*100)
                 # tgt_rdd = tgt_sample_DF.rdd.map(lambda x: features_to_list(x.features))
                 testRows = tgt_sample_DF.collect()
                 test_label = []
@@ -211,7 +211,7 @@ def gen_model(model_train, num_splits: int = 3):
                 for x in subRows:
                     # print(x.features)
                     train_list.append(sparse_to_labeledpt(x.label, x.features))
-                svm = SVMWithSGD.train(sc.parallelize(train_list), iterations=nfolds)
+                svm = SVMWithSGD.train(sc.parallelize(train_list), iterations=nfolds*100)
                 train_label = []
                 train_pred = []
                 for x in subRows:
