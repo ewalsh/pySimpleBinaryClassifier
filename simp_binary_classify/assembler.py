@@ -68,6 +68,14 @@ def assemble_features(train_data):
             updated_test_df = scaler_model.transform(model_test)
             updated_train_df.createOrReplaceTempView("model_training")
             updated_test_df.createOrReplaceTempView("model_testing")
+            # collate
+            modelDataDF = spark.sql("SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num")
+            modelDataDF.createOrReplaceTempView("model_train")
+            # testDF = spark.sql("SELECT * FROM test")
+            # model_testing = assembler.transform(testDF)
+            # model_testing.createOrReplaceTempView("model_testing")
+            model_test = spark.sql("SELECT row_num as id, features from model_testing")
+            model_test.createOrReplaceTempView("model_test")
         else:
             print("assembling without scaling")
             # update df
@@ -81,14 +89,15 @@ def assemble_features(train_data):
             model_training.createOrReplaceTempView("model_training")
             model_testing = assembler.transform(testDF)
             model_testing.createOrReplaceTempView("model_testing")
-        # collate
-        modelDataDF = spark.sql("SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num")
-        modelDataDF.createOrReplaceTempView("model_train")
-        testDF = spark.sql("SELECT * FROM test")
-        model_testing = assembler.transform(testDF)
-        model_testing.createOrReplaceTempView("model_testing")
-        model_test = spark.sql("SELECT row_num as id, features from model_testing")
-        model_test.createOrReplaceTempView("model_test")
+            # collate
+            modelDataDF = spark.sql("SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num")
+            modelDataDF.createOrReplaceTempView("model_train")
+            # testDF = spark.sql("SELECT * FROM test")
+            # model_testing = assembler.transform(testDF)
+            # model_testing.createOrReplaceTempView("model_testing")
+            model_test = spark.sql("SELECT row_num as id, features from model_testing")
+            model_test.createOrReplaceTempView("model_test")
+
     # run
     gen_assembly()
 
