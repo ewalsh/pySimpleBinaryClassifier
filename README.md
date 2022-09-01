@@ -20,3 +20,7 @@ First, please make sure you have python 3.10 available. You can see a copy of th
 After this setup is ready, you can run the app with a simple:
 `python app.py`
 comand from the root directory.
+
+# TO DO
+The major part not yet completed is there should be more
+functionality to evaluate models. This is a work in progress.
