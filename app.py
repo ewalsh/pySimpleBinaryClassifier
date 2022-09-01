@@ -1,6 +1,7 @@
 from simp_binary_classify.eda import EDA
 from simp_binary_classify.spark import spark
 from simp_binary_classify.assembler import assemble_features
+from simp_binary_classify.model import gen_model
 import sys
 import os
 from dotenv import load_dotenv

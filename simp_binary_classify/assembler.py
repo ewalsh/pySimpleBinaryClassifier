@@ -28,45 +28,59 @@ def assemble_features(train_data):
         if cat_transform:
             print("cat transform in assembler")
             trainDF = spark.sql("SELECT * FROM train")
+            testDF = spark.sql("SELECT * FROM test")
             str_indexer = StringIndexer()
             cat_cols = list(filter(lambda x: x.find('cat') != -1, trainDF.columns[1:]))
             str_indexer.setInputCols(cat_cols)
             cat_cols_ind = list(map(lambda x: x + '_Index', cat_cols))
             str_indexer.setOutputCols(cat_cols_ind)
-            updated_ind = str_indexer.fit(trainDF)
-            updated_df = updated_ind.transform(trainDF)
+            combDF = trainDF.union(testDF)
+            indexer = str_indexer.fit(combDF)
+            updated_train_df = indexer.transform(trainDF)
+            updated_test_df = indexer.transform(testDF)
+            updated_combDF = updated_train_df.union(updated_test_df)
             ohe = OneHotEncoder()
             ohe.setInputCols(cat_cols_ind)
             ohe.setOutputCols(list(map(lambda x: x[:(len(x)-6)] + '_classVec', cat_cols_ind)))
-            updated_ohe = ohe.fit(updated_df)
-            updated_df2 = updated_ohe.transform(updated_df)
-            updated_df2.createOrReplaceTempView("train")
+            updated_ohe = ohe.fit(updated_combDF)
+            updated_train_df2 = updated_ohe.transform(updated_train_df)
+            updated_test_df2 = updated_ohe.transform(updated_test_df)
+            updated_train_df2.createOrReplaceTempView("train")
+            updated_test_df2.createOrReplaceTempView("test")
             # test dataset
         if scale_data:
             print("scale data in assembler")
             # replace df in case of transform update
             trainDF = spark.sql("SELECT * FROM train")
+            testDF = spark.sql("SELECT * FROM test")
             assembler = VectorAssembler(
                 inputCols=trainDF.columns[1:],
                 outputCol="vectorized_features"
             )
             model_training = assembler.transform(trainDF)
+            model_test = assembler.transform(testDF)
             scaler = StandardScaler()
             scaler.setInputCol("vectorized_features")
             scaler.setOutputCol("features")
-            scaler_model = scaler.fit(model_training)
-            updated_df = scaler_model.transform(model_training)
-            updated_df.createOrReplaceTempView("model_training")
+            model_comb = model_training.union(model_test)
+            scaler_model = scaler.fit(model_comb)
+            updated_train_df = scaler_model.transform(model_training)
+            updated_test_df = scaler_model.transform(model_test)
+            updated_train_df.createOrReplaceTempView("model_training")
+            updated_test_df.createOrReplaceTempView("model_testing")
         else:
             print("assembling without scaling")
             # update df
             trainDF = spark.sql("SELECT * FROM train")
+            testDF = spark.sql("SELECT * FROM test")
             assembler = VectorAssembler(
                 inputCols=trainDF.columns[1:],
                 outputCol="features"
             )
             model_training = assembler.transform(trainDF)
             model_training.createOrReplaceTempView("model_training")
+            model_testing = assembler.transform(testDF)
+            model_testing.createOrReplaceTempView("model_testing")
         # collate
         modelDataDF = spark.sql("SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num")
         modelDataDF.createOrReplaceTempView("model_train")
