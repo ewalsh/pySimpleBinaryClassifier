@@ -50,7 +50,7 @@ def check_best_metrics(metric_dict):
         with open('./metrics/best_validated.csv', newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                current_best = {'mroc': row['mroc'], 'sdroc': row['sdroc']}
+                current_best = {'mroc': row['mroc'], 'sdroc': row['sdroc'], 'name': row['name']}
         # check current agaist best
         return(round(float(current_best['mroc']),2) <= round(float(metric_dict['mroc']), 2))
     except:
@@ -118,7 +118,11 @@ def gen_model(model_train, num_splits: int = 3):
             # read current best validated metrics
             # if superior run model on full test set and
             # make predictions on actual test data
-            validated_metrics = {'mroc': mroc, 'sdroc': sdroc}
+            model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
+            '_' + str(category_convert) + '_' + str(cat_transform) +\
+            '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
+            '_' + str(category_trunc_threshold)
+            validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
             metrics_check = check_best_metrics(validated_metrics)
             if metrics_check:
                 # write new best metrics
@@ -138,10 +142,6 @@ def gen_model(model_train, num_splits: int = 3):
                 # collect test predictions
                 preds_DF = spark.sql("SELECT id, prediction FROM full_test ORDER BY id")
                 preds = preds_DF.collect()
-                model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
-                '_' + str(category_convert) + '_' + str(cat_transform) +\
-                '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
-                '_' + str(category_trunc_threshold)
                 preds_df = pd.DataFrame(
                     {
                         'model_name': [model_name for x in preds],
@@ -196,7 +196,11 @@ def gen_model(model_train, num_splits: int = 3):
             # read current best validated metrics
             # if superior run model on full test set and
             # make predictions on actual test data
-            validated_metrics = {'mroc': mroc, 'sdroc': sdroc}
+            model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
+            '_' + str(category_convert) + '_' + str(cat_transform) +\
+            '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
+            '_' + str(category_trunc_threshold)
+            validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
             metrics_check = check_best_metrics(validated_metrics)
             print("model doesn't beat curent best")
             if metrics_check:
