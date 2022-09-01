@@ -25,7 +25,7 @@ def sparse_to_labeledpt(label, features):
     if str(type(features)) =="<class 'pyspark.ml.linalg.DenseVector'>":
         ind = list(range(0, features.size))
     else:
-        ind = x.features.indices
+        ind = features.indices
     counter = 0
     for i in ind:
         tmp[i] = features.values[counter]
@@ -37,7 +37,7 @@ def features_to_list(features):
     if str(type(features)) =="<class 'pyspark.ml.linalg.DenseVector'>":
         ind = list(range(0, features.size))
     else:
-        ind = x.features.indices
+        ind = features.indices
     counter = 0
     for i in ind:
         tmp[i] = features.values[counter]
@@ -55,15 +55,17 @@ def check_best_metrics(metric_dict):
     except:
         print("no best_validated file in metrics folder")
 
-def gen_model(model_train: pyspark.sql.DataFrame, model_name: String, num_splits: int = 3):
+def gen_model(model_train, num_splits: int = 3):
     # collect parameters for modelling and saving
     category_trunc_threshold = float(os.getenv("category_trunc_threshold", "0.01"))
     unbalanced_threshold = float(os.getenv("unbalanced_threshold", "10"))
     category_convert = (os.getenv("category_convert", "False")) == "True"
+    cat_transform = (os.getenv("cat_transform", "False")) == "True"
+    scale_data = (os.getenv("scale_data", "False")) == "True"
     nfolds = float(os.getenv("nfolds", "10"))
     tv_split = float(os.getenv("test_validate_split", "0.75"))
     model = os.getenv("model", "lr")
-    match model_name:
+    match model:
         case "logistic":
             lr = LogisticRegression()
             pipeline = Pipeline(stages=[lr])
@@ -136,7 +138,8 @@ def gen_model(model_train: pyspark.sql.DataFrame, model_name: String, num_splits
                 preds_DF = spark.sql("SELECT id, prediction FROM full_test ORDER BY id")
                 preds = preds_DF.collect()
                 model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
-                '_' + str(category_convert) + '_' + str(unbalanced_threshold) +\
+                '_' + str(category_convert) + '_' + str(cat_transform) +\
+                '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
                 '_' + str(category_trunc_threshold)
                 preds_df = pd.DataFrame(
                     {
@@ -194,6 +197,7 @@ def gen_model(model_train: pyspark.sql.DataFrame, model_name: String, num_splits
             # make predictions on actual test data
             validated_metrics = {'mroc': mroc, 'sdroc': sdroc}
             metrics_check = check_best_metrics(validated_metrics)
+            print("model doesn't beat curent best")
             if metrics_check:
                 # write new best metrics
                 with open('./metrics/best_validated.csv', 'w', newline='') as f:
@@ -219,7 +223,26 @@ def gen_model(model_train: pyspark.sql.DataFrame, model_name: String, num_splits
                 testRows = full_test_data.collect()
                 test_label = []
                 test_pred = []
+                test_ids = []
                 for x in testRows:
                     test_features = features_to_list(x.features)
                     test_pred.append(svm.predict(test_features))
                     test_label.append(x.label)
+                    test_ids.append(x.id)
+                # collect predcitions
+                model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
+                '_' + str(category_convert) + '_' + str(cat_transform) +\
+                '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
+                '_' + str(category_trunc_threshold)
+                preds_df = pd.DataFrame(
+                    {
+                        'model_name': [model_name for x in test_pred],
+                        'id': test_ids,
+                        'prediction': test_pred
+                    }
+                )
+                preds_df.to_csv('./metrics/predictions.csv')
+        case "gbt":
+            print("work in progress")
+        case other:
+            print("{} model hasn't been added yet!".format(model))

@@ -23,8 +23,10 @@ if __name__ == "__main__":
         model_train = spark.sql("SELECT * FROM model_train")
         #
         num_splits = int(os.getenv("num_splits", "5"))
-        model = os.getenv("model", "lr")
+        model_name = os.getenv("model", "lr")
+        # run model
+        gen_model(model_train, num_splits)
 
-        spark.sql("SELECT * FROM train").show()
+        spark.sql("SELECT * FROM model_test").show()
     else:
         print('Please install python 3.10')

@@ -1,0 +1,11 @@
+master="local[*]"
+spark_name="simple_binary_classifier"
+category_trunc_threshold=0.01
+unbalanced_threshold=10
+nfolds=10
+test_validate_split=0.75
+num_splits=5
+category_convert=True
+scale_data=False
+cat_transform=False
+model="svm"
