@@ -13,7 +13,8 @@ from pyspark.mllib.classification import SVMWithSGD
 from pyspark.mllib.linalg import SparseVector
 from pyspark.mllib.regression import LabeledPoint
 from pyspark.ml.classification import BinaryLogisticRegressionSummary
-
+from pyspark.ml.classification import GBTClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 import os
 import csv
 from dotenv import load_dotenv
@@ -66,7 +67,7 @@ def gen_model(model_train, num_splits: int = 3):
     tv_split = float(os.getenv("test_validate_split", "0.75"))
     model = os.getenv("model", "lr")
     match model:
-        case "logistic":
+        case "lr":
             lr = LogisticRegression()
             pipeline = Pipeline(stages=[lr])
             paramGrid = ParamGridBuilder() \
@@ -244,5 +245,28 @@ def gen_model(model_train, num_splits: int = 3):
                 preds_df.to_csv('./metrics/predictions.csv')
         case "gbt":
             print("work in progress")
+            lr = LogisticRegression()
+            pipeline = Pipeline(stages=[lr])
+            paramGrid = ParamGridBuilder() \
+            .addGrid(lr.regParam,
+                     [x * 0.01 for x in range(0, 10, 2)] +\
+                     [x * 0.1 for x in range(1, 10)]) \
+            .build()
+            evaluator = BinaryClassificationEvaluator()
+            cnt = model_train.count() * tv_split
+            crossval = CrossValidator(estimator=pipeline,
+                                      estimatorParamMaps=paramGrid,
+                                      evaluator=BinaryClassificationEvaluator(),
+                                      numFolds=nfolds)
+
+            # for each num_split, randomly split data to create
+            # a validation subgroup
+            mod_list = []
+            mse_list = []
+            roc_list = []
+            for i in range(num_splits):
+                sub_sample_DF = spark.sql("SELECT * FROM model_train TABLESAMPLE (75 PERCENT)")
+                sub_sample_DF.createOrReplaceTempView("sub")
+                tgt_sample_DF = spark.sql("SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)")
         case other:
             print("{} model hasn't been added yet!".format(model))
