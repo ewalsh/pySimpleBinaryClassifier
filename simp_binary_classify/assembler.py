@@ -29,6 +29,7 @@ def assemble_features(train_data):
             print("cat transform in assembler")
             trainDF = spark.sql("SELECT * FROM train")
             str_indexer = StringIndexer()
+            cat_cols = list(filter(lambda x: x.find('cat') != -1, trainDF.columns[1:]))
             str_indexer.setInputCols(cat_cols)
             cat_cols_ind = list(map(lambda x: x + '_Index', cat_cols))
             str_indexer.setOutputCols(cat_cols_ind)
