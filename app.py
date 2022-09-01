@@ -2,6 +2,10 @@ from simp_binary_classify.eda import EDA
 from simp_binary_classify.spark import spark
 from simp_binary_classify.assembler import assemble_features
 import sys
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if __name__ == "__main__":
     # check version
@@ -16,6 +20,9 @@ if __name__ == "__main__":
         # assemble the feature data sets
         assemble_features(eda.train_data)
         model_train = spark.sql("SELECT * FROM model_train")
+        #
+        num_splits = int(os.getenv("num_splits", "5"))
+        model = os.getenv("model", "lr")
 
         spark.sql("SELECT * FROM train").show()
     else:
