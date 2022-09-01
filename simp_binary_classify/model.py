@@ -65,6 +65,8 @@ def gen_model(model_train, num_splits: int = 3):
     scale_data = (os.getenv("scale_data", "False")) == "True"
     nfolds = float(os.getenv("nfolds", "10"))
     tv_split = float(os.getenv("test_validate_split", "0.75"))
+    gbt_depth = float(os.getenv("gbt_depth", "45"))
+    gbt_learn = float(os.getenv("gbpt_learn_rt", "0.05"))
     model = os.getenv("model", "lr")
     match model:
         case "lr":
@@ -125,6 +127,7 @@ def gen_model(model_train, num_splits: int = 3):
             validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
             metrics_check = check_best_metrics(validated_metrics)
             if metrics_check:
+                print("model is a new best!")
                 # write new best metrics
                 with open('./metrics/best_validated.csv', 'w', newline='') as f:
                     w = csv.DictWriter(f, validated_metrics.keys())
@@ -150,6 +153,8 @@ def gen_model(model_train, num_splits: int = 3):
                     }
                 )
                 preds_df.to_csv('./metrics/predictions.csv')
+            else:
+                print("model doesn't beat current best")
         case "svm":
             mod_list = []
             mse_list = []
@@ -202,8 +207,8 @@ def gen_model(model_train, num_splits: int = 3):
             '_' + str(category_trunc_threshold)
             validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
             metrics_check = check_best_metrics(validated_metrics)
-            print("model doesn't beat curent best")
             if metrics_check:
+                print("model is a new best!")
                 # write new best metrics
                 with open('./metrics/best_validated.csv', 'w', newline='') as f:
                     w = csv.DictWriter(f, validated_metrics.keys())
@@ -247,22 +252,13 @@ def gen_model(model_train, num_splits: int = 3):
                     }
                 )
                 preds_df.to_csv('./metrics/predictions.csv')
+            else:
+                print("model doesn't beat current best")
         case "gbt":
-            print("work in progress")
-            lr = LogisticRegression()
-            pipeline = Pipeline(stages=[lr])
-            paramGrid = ParamGridBuilder() \
-            .addGrid(lr.regParam,
-                     [x * 0.01 for x in range(0, 10, 2)] +\
-                     [x * 0.1 for x in range(1, 10)]) \
-            .build()
-            evaluator = BinaryClassificationEvaluator()
-            cnt = model_train.count() * tv_split
-            crossval = CrossValidator(estimator=pipeline,
-                                      estimatorParamMaps=paramGrid,
-                                      evaluator=BinaryClassificationEvaluator(),
-                                      numFolds=nfolds)
-
+            # print("work in progress")
+            gbt = GBTClassifier(labelCol = 'label', featuresCol = 'features',
+                                maxIter=3000, maxDepth=gbt_depth,
+                                stepSize=gbt_learn)
             # for each num_split, randomly split data to create
             # a validation subgroup
             mod_list = []
@@ -272,5 +268,61 @@ def gen_model(model_train, num_splits: int = 3):
                 sub_sample_DF = spark.sql("SELECT * FROM model_train TABLESAMPLE (75 PERCENT)")
                 sub_sample_DF.createOrReplaceTempView("sub")
                 tgt_sample_DF = spark.sql("SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)")
+                gbtModel = gbt.fit(sub_sample_DF)
+                sub_test = gbtModel.transform(tgt_sample_DF)
+                sub_test.createOrReplaceTempView("sub_test")
+                sub_test_rows = sub_test.collect()
+                oos_mse = spark.sql("SELECT SUM(pow(label - prediction, 2)) as mse FROM sub_test").collect()
+                # tp = spark.sql("SELECT COUNT(*) FROM sub_test WHERE label = 1 AND prediction = label")
+                # p = spark.sql("SELECT COUNT(*) FROM sub_test WHERE label = prediction")
+                p = list(filter(lambda x: x.prediction == 1.0, sub_test_rows))
+                tp = list(filter(lambda x: x.label == 1.0, p))
+                tpr = len(tp)/len(p)
+                fp = list(filter(lambda x: x.label == 0.0, p))
+                n = list(filter(lambda x: x.prediction == 0.0, sub_test_rows))
+                fpr = len(fp)/len(n)
+                roc = tpr/fpr
+                mse_list.append(oos_mse[0])
+                mod_list.append(gbtModel)
+                roc_list.append(roc)
+            # read current best validated metrics
+            # if superior run model on full test set and
+            # make predictions on actual test data
+            model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
+            '_' + str(category_convert) + '_' + str(cat_transform) +\
+            '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
+            '_' + str(category_trunc_threshold) +\
+            '_' + str(gbt_depth) + '_' + gbt_learn
+            validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
+            metrics_check = check_best_metrics(validated_metrics)
+            if metrics_check:
+                print("model is a new best!")
+                # write new best metrics
+                with open('./metrics/best_validated.csv', 'w', newline='') as f:
+                    w = csv.DictWriter(f, validated_metrics.keys())
+                    w.writeheader()
+                    w.writerow(validated_metrics)
+                # train model on full test set
+                full_train_data = spark.sql("SELECT * FROM model_train")
+                full_cvModel = crossval.fit(full_train_data)
+                full_train = full_cvModel.transform(full_train)
+                # plot ROC
+                # find test model predictions
+                full_test_data = spark.sql("SELECT * FROM model_test")
+                full_test = full_cvModel.transform(full_test_data)
+                full_test.createOrReplaceTempView("full_test")
+                # collect test predictions
+                preds_DF = spark.sql("SELECT id, prediction FROM full_test ORDER BY id")
+                preds = preds_DF.collect()
+                preds_df = pd.DataFrame(
+                    {
+                        'model_name': [model_name for x in preds],
+                        'id': [x.id for x in preds],
+                        'prediction': [x.prediction for x in preds]
+                    }
+                )
+                preds_df.to_csv('./metrics/predictions.csv')
+            else:
+                print("model doesn't beat current best")
         case other:
             print("{} model hasn't been added yet!".format(model))
