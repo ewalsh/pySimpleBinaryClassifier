@@ -285,6 +285,9 @@ def gen_model(model_train, num_splits: int = 3):
                 mse_list.append(oos_mse[0])
                 mod_list.append(gbtModel)
                 roc_list.append(roc)
+            # analyze mean mse and look at sd for stability
+            mroc = statistics.mean(roc_list)
+            sdroc = statistics.stdev(roc_list)
             # read current best validated metrics
             # if superior run model on full test set and
             # make predictions on actual test data
@@ -292,7 +295,7 @@ def gen_model(model_train, num_splits: int = 3):
             '_' + str(category_convert) + '_' + str(cat_transform) +\
             '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
             '_' + str(category_trunc_threshold) +\
-            '_' + str(gbt_depth) + '_' + gbt_learn
+            '_' + str(gbt_depth) + '_' + str(gbt_learn)
             validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
             metrics_check = check_best_metrics(validated_metrics)
             if metrics_check:
@@ -304,8 +307,8 @@ def gen_model(model_train, num_splits: int = 3):
                     w.writerow(validated_metrics)
                 # train model on full test set
                 full_train_data = spark.sql("SELECT * FROM model_train")
-                full_gbtModel = gbtModel.fit(full_train_data)
-                full_train = full_gbtModel.transform(full_train)
+                full_gbtModel = gbt.fit(full_train_data)
+                full_train = full_gbtModel.transform(full_train_data)
                 # plot ROC
                 # find test model predictions
                 full_test_data = spark.sql("SELECT * FROM model_test")
