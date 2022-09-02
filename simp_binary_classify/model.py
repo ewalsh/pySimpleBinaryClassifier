@@ -136,7 +136,7 @@ def gen_model(model_train, num_splits: int = 3):
                 # train model on full test set
                 full_train_data = spark.sql("SELECT * FROM model_train")
                 full_cvModel = crossval.fit(full_train_data)
-                full_train = full_cvModel.transform(full_train)
+                full_train = full_cvModel.transform(full_train_data)
                 # plot ROC
                 # find test model predictions
                 full_test_data = spark.sql("SELECT * FROM model_test")
