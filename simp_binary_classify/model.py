@@ -304,12 +304,12 @@ def gen_model(model_train, num_splits: int = 3):
                     w.writerow(validated_metrics)
                 # train model on full test set
                 full_train_data = spark.sql("SELECT * FROM model_train")
-                full_cvModel = crossval.fit(full_train_data)
-                full_train = full_cvModel.transform(full_train)
+                full_gbtModel = gbtModel.fit(full_train_data)
+                full_train = full_gbtModel.transform(full_train)
                 # plot ROC
                 # find test model predictions
                 full_test_data = spark.sql("SELECT * FROM model_test")
-                full_test = full_cvModel.transform(full_test_data)
+                full_test = full_gbtModel.transform(full_test_data)
                 full_test.createOrReplaceTempView("full_test")
                 # collect test predictions
                 preds_DF = spark.sql("SELECT id, prediction FROM full_test ORDER BY id")
