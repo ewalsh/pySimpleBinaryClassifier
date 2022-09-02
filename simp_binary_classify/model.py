@@ -257,9 +257,9 @@ def gen_model(model_train, num_splits: int = 3):
         case "gbt":
             # print("work in progress")
             gbt = GBTClassifier(labelCol = 'label', featuresCol = 'features')
-            gbt.setMaxIter(300)
-            gbt.setMaxDepth(gbt_depth)
-            gbt.setStepSize(gbt_learn)
+            # gbt.setMaxIter(300)
+            # gbt.setMaxDepth(gbt_depth)
+            # gbt.setStepSize(gbt_learn)
             # for each num_split, randomly split data to create
             # a validation subgroup
             mod_list = []
