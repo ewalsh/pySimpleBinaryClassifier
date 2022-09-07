@@ -21,9 +21,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def sparse_to_labeledpt(label, features):
     tmp = [0 for x in range(features.size)]
-    if str(type(features)) =="<class 'pyspark.ml.linalg.DenseVector'>":
+    if str(type(features)) == "<class 'pyspark.ml.linalg.DenseVector'>":
         ind = list(range(0, features.size))
     else:
         ind = features.indices
@@ -31,11 +32,12 @@ def sparse_to_labeledpt(label, features):
     for i in ind:
         tmp[i] = features.values[counter]
         counter = counter + 1
-    return(LabeledPoint(float(label), tmp))
+    return LabeledPoint(float(label), tmp)
+
 
 def features_to_list(features):
     tmp = [0 for x in range(features.size)]
-    if str(type(features)) =="<class 'pyspark.ml.linalg.DenseVector'>":
+    if str(type(features)) == "<class 'pyspark.ml.linalg.DenseVector'>":
         ind = list(range(0, features.size))
     else:
         ind = features.indices
@@ -43,18 +45,26 @@ def features_to_list(features):
     for i in ind:
         tmp[i] = features.values[counter]
         counter = counter + 1
-    return(tmp)
+    return tmp
+
 
 def check_best_metrics(metric_dict):
     try:
-        with open('./metrics/best_validated.csv', newline='') as csvfile:
+        with open("./metrics/best_validated.csv", newline="") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                current_best = {'mroc': row['mroc'], 'sdroc': row['sdroc'], 'name': row['name']}
+                current_best = {
+                    "mroc": row["mroc"],
+                    "sdroc": row["sdroc"],
+                    "name": row["name"],
+                }
         # check current agaist best
-        return(round(float(current_best['mroc']),2) <= round(float(metric_dict['mroc']), 2))
+        return round(float(current_best["mroc"]), 2) <= round(
+            float(metric_dict["mroc"]), 2
+        )
     except:
         print("no best_validated file in metrics folder")
+
 
 def gen_model(model_train, num_splits: int = 3):
     # collect parameters for modelling and saving
@@ -72,17 +82,23 @@ def gen_model(model_train, num_splits: int = 3):
         case "lr":
             lr = LogisticRegression()
             pipeline = Pipeline(stages=[lr])
-            paramGrid = ParamGridBuilder() \
-            .addGrid(lr.regParam,
-                     [x * 0.01 for x in range(0, 10, 2)] +\
-                     [x * 0.1 for x in range(1, 10)]) \
-            .build()
+            paramGrid = (
+                ParamGridBuilder()
+                .addGrid(
+                    lr.regParam,
+                    [x * 0.01 for x in range(0, 10, 2)]
+                    + [x * 0.1 for x in range(1, 10)],
+                )
+                .build()
+            )
             evaluator = BinaryClassificationEvaluator()
             cnt = model_train.count() * tv_split
-            crossval = CrossValidator(estimator=pipeline,
-                                      estimatorParamMaps=paramGrid,
-                                      evaluator=BinaryClassificationEvaluator(),
-                                      numFolds=nfolds)
+            crossval = CrossValidator(
+                estimator=pipeline,
+                estimatorParamMaps=paramGrid,
+                evaluator=BinaryClassificationEvaluator(),
+                numFolds=nfolds,
+            )
 
             # for each num_split, randomly split data to create
             # a validation subgroup
@@ -90,23 +106,29 @@ def gen_model(model_train, num_splits: int = 3):
             mse_list = []
             roc_list = []
             for i in range(num_splits):
-                sub_sample_DF = spark.sql("SELECT * FROM model_train TABLESAMPLE (75 PERCENT)")
+                sub_sample_DF = spark.sql(
+                    "SELECT * FROM model_train TABLESAMPLE (75 PERCENT)"
+                )
                 sub_sample_DF.createOrReplaceTempView("sub")
-                tgt_sample_DF = spark.sql("SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)")
+                tgt_sample_DF = spark.sql(
+                    "SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)"
+                )
                 cvModel = crossval.fit(sub_sample_DF)
                 sub_test = cvModel.transform(tgt_sample_DF)
                 sub_test.createOrReplaceTempView("sub_test")
                 sub_test_rows = sub_test.collect()
-                oos_mse = spark.sql("SELECT SUM(pow(label - prediction, 2)) as mse FROM sub_test").collect()
+                oos_mse = spark.sql(
+                    "SELECT SUM(pow(label - prediction, 2)) as mse FROM sub_test"
+                ).collect()
                 # tp = spark.sql("SELECT COUNT(*) FROM sub_test WHERE label = 1 AND prediction = label")
                 # p = spark.sql("SELECT COUNT(*) FROM sub_test WHERE label = prediction")
                 p = list(filter(lambda x: x.prediction == 1.0, sub_test_rows))
                 tp = list(filter(lambda x: x.label == 1.0, p))
-                tpr = len(tp)/len(p)
+                tpr = len(tp) / len(p)
                 fp = list(filter(lambda x: x.label == 0.0, p))
                 n = list(filter(lambda x: x.prediction == 0.0, sub_test_rows))
-                fpr = len(fp)/len(n)
-                roc = tpr/fpr
+                fpr = len(fp) / len(n)
+                roc = tpr / fpr
                 mse_list.append(oos_mse[0])
                 mod_list.append(cvModel)
                 roc_list.append(roc)
@@ -120,16 +142,29 @@ def gen_model(model_train, num_splits: int = 3):
             # read current best validated metrics
             # if superior run model on full test set and
             # make predictions on actual test data
-            model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
-            '_' + str(category_convert) + '_' + str(cat_transform) +\
-            '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
-            '_' + str(category_trunc_threshold)
-            validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
+            model_name = (
+                model
+                + "_"
+                + str(tv_split)
+                + "_"
+                + str(nfolds)
+                + "_"
+                + str(category_convert)
+                + "_"
+                + str(cat_transform)
+                + "_"
+                + str(scale_data)
+                + "_"
+                + str(unbalanced_threshold)
+                + "_"
+                + str(category_trunc_threshold)
+            )
+            validated_metrics = {"mroc": mroc, "sdroc": sdroc, "name": model_name}
             metrics_check = check_best_metrics(validated_metrics)
             if metrics_check:
                 print("model is a new best!")
                 # write new best metrics
-                with open('./metrics/best_validated.csv', 'w', newline='') as f:
+                with open("./metrics/best_validated.csv", "w", newline="") as f:
                     w = csv.DictWriter(f, validated_metrics.keys())
                     w.writeheader()
                     w.writerow(validated_metrics)
@@ -147,12 +182,12 @@ def gen_model(model_train, num_splits: int = 3):
                 preds = preds_DF.collect()
                 preds_df = pd.DataFrame(
                     {
-                        'model_name': [model_name for x in preds],
-                        'id': [x.id for x in preds],
-                        'prediction': [x.prediction for x in preds]
+                        "model_name": [model_name for x in preds],
+                        "id": [x.id for x in preds],
+                        "prediction": [x.prediction for x in preds],
                     }
                 )
-                preds_df.to_csv('./metrics/predictions.csv')
+                preds_df.to_csv("./metrics/predictions.csv")
             else:
                 print("model doesn't beat current best")
         case "svm":
@@ -160,16 +195,22 @@ def gen_model(model_train, num_splits: int = 3):
             mse_list = []
             roc_list = []
             for i in range(num_splits):
-                sub_sample_DF = spark.sql("SELECT * FROM model_train TABLESAMPLE (75 PERCENT)")
+                sub_sample_DF = spark.sql(
+                    "SELECT * FROM model_train TABLESAMPLE (75 PERCENT)"
+                )
                 sub_sample_DF.createOrReplaceTempView("sub")
-                tgt_sample_DF = spark.sql("SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)")
+                tgt_sample_DF = spark.sql(
+                    "SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)"
+                )
                 # sub_model_train_rdd = sub_sample_DF.rdd.map(lambda x: sparse_to_labeledpt(x.label, x.features))
                 subRows = sub_sample_DF.collect()
                 train_list = []
                 for x in subRows:
                     # print(x.features)
                     train_list.append(sparse_to_labeledpt(x.label, x.features))
-                svm = SVMWithSGD.train(sc.parallelize(train_list), iterations=nfolds*100)
+                svm = SVMWithSGD.train(
+                    sc.parallelize(train_list), iterations=nfolds * 100
+                )
                 # tgt_rdd = tgt_sample_DF.rdd.map(lambda x: features_to_list(x.features))
                 testRows = tgt_sample_DF.collect()
                 test_label = []
@@ -179,20 +220,15 @@ def gen_model(model_train, num_splits: int = 3):
                     test_pred.append(svm.predict(test_features))
                     test_label.append(x.label)
                 # collect results
-                svm_df = pd.DataFrame(
-                    {
-                        "prediction": test_pred,
-                        "label": test_label
-                    }
-                )
+                svm_df = pd.DataFrame({"prediction": test_pred, "label": test_label})
                 # collect metrics
                 p = svm_df[svm_df["prediction"] == 1.0]
                 tp = p[p["label"] == 1.0]
-                tpr = tp.shape[0]/p.shape[0]
+                tpr = tp.shape[0] / p.shape[0]
                 fp = p[p["label"] == 0.0]
                 n = svm_df[svm_df["prediction"] == 0.0]
-                fpr = len(fp)/len(n)
-                roc = tpr/fpr
+                fpr = len(fp) / len(n)
+                roc = tpr / fpr
                 mod_list.append(svm)
                 roc_list.append(roc)
             # analyze mean mse and look at sd for stability
@@ -201,16 +237,29 @@ def gen_model(model_train, num_splits: int = 3):
             # read current best validated metrics
             # if superior run model on full test set and
             # make predictions on actual test data
-            model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
-            '_' + str(category_convert) + '_' + str(cat_transform) +\
-            '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
-            '_' + str(category_trunc_threshold)
-            validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
+            model_name = (
+                model
+                + "_"
+                + str(tv_split)
+                + "_"
+                + str(nfolds)
+                + "_"
+                + str(category_convert)
+                + "_"
+                + str(cat_transform)
+                + "_"
+                + str(scale_data)
+                + "_"
+                + str(unbalanced_threshold)
+                + "_"
+                + str(category_trunc_threshold)
+            )
+            validated_metrics = {"mroc": mroc, "sdroc": sdroc, "name": model_name}
             metrics_check = check_best_metrics(validated_metrics)
             if metrics_check:
                 print("model is a new best!")
                 # write new best metrics
-                with open('./metrics/best_validated.csv', 'w', newline='') as f:
+                with open("./metrics/best_validated.csv", "w", newline="") as f:
                     w = csv.DictWriter(f, validated_metrics.keys())
                     w.writeheader()
                     w.writerow(validated_metrics)
@@ -221,7 +270,9 @@ def gen_model(model_train, num_splits: int = 3):
                 for x in subRows:
                     # print(x.features)
                     train_list.append(sparse_to_labeledpt(x.label, x.features))
-                svm = SVMWithSGD.train(sc.parallelize(train_list), iterations=nfolds*100)
+                svm = SVMWithSGD.train(
+                    sc.parallelize(train_list), iterations=nfolds * 100
+                )
                 train_label = []
                 train_pred = []
                 for x in subRows:
@@ -240,23 +291,36 @@ def gen_model(model_train, num_splits: int = 3):
                     test_label.append(x.label)
                     test_ids.append(x.id)
                 # collect predcitions
-                model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
-                '_' + str(category_convert) + '_' + str(cat_transform) +\
-                '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
-                '_' + str(category_trunc_threshold)
+                model_name = (
+                    model
+                    + "_"
+                    + str(tv_split)
+                    + "_"
+                    + str(nfolds)
+                    + "_"
+                    + str(category_convert)
+                    + "_"
+                    + str(cat_transform)
+                    + "_"
+                    + str(scale_data)
+                    + "_"
+                    + str(unbalanced_threshold)
+                    + "_"
+                    + str(category_trunc_threshold)
+                )
                 preds_df = pd.DataFrame(
                     {
-                        'model_name': [model_name for x in test_pred],
-                        'id': test_ids,
-                        'prediction': test_pred
+                        "model_name": [model_name for x in test_pred],
+                        "id": test_ids,
+                        "prediction": test_pred,
                     }
                 )
-                preds_df.to_csv('./metrics/predictions.csv')
+                preds_df.to_csv("./metrics/predictions.csv")
             else:
                 print("model doesn't beat current best")
         case "gbt":
             # print("work in progress")
-            gbt = GBTClassifier(labelCol = 'label', featuresCol = 'features')
+            gbt = GBTClassifier(labelCol="label", featuresCol="features")
             # gbt.setMaxIter(300)
             # gbt.setMaxDepth(gbt_depth)
             # gbt.setStepSize(gbt_learn)
@@ -266,23 +330,29 @@ def gen_model(model_train, num_splits: int = 3):
             mse_list = []
             roc_list = []
             for i in range(num_splits):
-                sub_sample_DF = spark.sql("SELECT * FROM model_train TABLESAMPLE (75 PERCENT)")
+                sub_sample_DF = spark.sql(
+                    "SELECT * FROM model_train TABLESAMPLE (75 PERCENT)"
+                )
                 sub_sample_DF.createOrReplaceTempView("sub")
-                tgt_sample_DF = spark.sql("SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)")
+                tgt_sample_DF = spark.sql(
+                    "SELECT * FROM model_train WHERE id NOT IN (SELECT id FROM sub)"
+                )
                 gbtModel = gbt.fit(sub_sample_DF)
                 sub_test = gbtModel.transform(tgt_sample_DF)
                 sub_test.createOrReplaceTempView("sub_test")
                 sub_test_rows = sub_test.collect()
-                oos_mse = spark.sql("SELECT SUM(pow(label - prediction, 2)) as mse FROM sub_test").collect()
+                oos_mse = spark.sql(
+                    "SELECT SUM(pow(label - prediction, 2)) as mse FROM sub_test"
+                ).collect()
                 # tp = spark.sql("SELECT COUNT(*) FROM sub_test WHERE label = 1 AND prediction = label")
                 # p = spark.sql("SELECT COUNT(*) FROM sub_test WHERE label = prediction")
                 p = list(filter(lambda x: x.prediction == 1.0, sub_test_rows))
                 tp = list(filter(lambda x: x.label == 1.0, p))
-                tpr = len(tp)/len(p)
+                tpr = len(tp) / len(p)
                 fp = list(filter(lambda x: x.label == 0.0, p))
                 n = list(filter(lambda x: x.prediction == 0.0, sub_test_rows))
-                fpr = len(fp)/len(n)
-                roc = tpr/fpr
+                fpr = len(fp) / len(n)
+                roc = tpr / fpr
                 mse_list.append(oos_mse[0])
                 mod_list.append(gbtModel)
                 roc_list.append(roc)
@@ -292,17 +362,33 @@ def gen_model(model_train, num_splits: int = 3):
             # read current best validated metrics
             # if superior run model on full test set and
             # make predictions on actual test data
-            model_name = model + '_' + str(tv_split) + '_' + str(nfolds) +\
-            '_' + str(category_convert) + '_' + str(cat_transform) +\
-            '_' + str(scale_data) + '_' + str(unbalanced_threshold) +\
-            '_' + str(category_trunc_threshold) +\
-            '_' + str(gbt_depth) + '_' + str(gbt_learn)
-            validated_metrics = {'mroc': mroc, 'sdroc': sdroc, 'name': model_name}
+            model_name = (
+                model
+                + "_"
+                + str(tv_split)
+                + "_"
+                + str(nfolds)
+                + "_"
+                + str(category_convert)
+                + "_"
+                + str(cat_transform)
+                + "_"
+                + str(scale_data)
+                + "_"
+                + str(unbalanced_threshold)
+                + "_"
+                + str(category_trunc_threshold)
+                + "_"
+                + str(gbt_depth)
+                + "_"
+                + str(gbt_learn)
+            )
+            validated_metrics = {"mroc": mroc, "sdroc": sdroc, "name": model_name}
             metrics_check = check_best_metrics(validated_metrics)
             if metrics_check:
                 print("model is a new best!")
                 # write new best metrics
-                with open('./metrics/best_validated.csv', 'w', newline='') as f:
+                with open("./metrics/best_validated.csv", "w", newline="") as f:
                     w = csv.DictWriter(f, validated_metrics.keys())
                     w.writeheader()
                     w.writerow(validated_metrics)
@@ -320,12 +406,12 @@ def gen_model(model_train, num_splits: int = 3):
                 preds = preds_DF.collect()
                 preds_df = pd.DataFrame(
                     {
-                        'model_name': [model_name for x in preds],
-                        'id': [x.id for x in preds],
-                        'prediction': [x.prediction for x in preds]
+                        "model_name": [model_name for x in preds],
+                        "id": [x.id for x in preds],
+                        "prediction": [x.prediction for x in preds],
                     }
                 )
-                preds_df.to_csv('./metrics/predictions.csv')
+                preds_df.to_csv("./metrics/predictions.csv")
             else:
                 print("model doesn't beat current best")
         case other:

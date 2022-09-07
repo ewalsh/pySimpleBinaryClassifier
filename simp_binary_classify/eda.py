@@ -1,6 +1,15 @@
 from simp_binary_classify.io import get_data
 import pandas as pd
-from plotnine import ggplot, geom_density, geom_histogram, aes, facet_wrap, ggtitle, geom_point, stat_smooth
+from plotnine import (
+    ggplot,
+    geom_density,
+    geom_histogram,
+    aes,
+    facet_wrap,
+    ggtitle,
+    geom_point,
+    stat_smooth,
+)
 from typing import List, Set
 from scipy.stats import shapiro
 from sys import float_info
@@ -44,7 +53,7 @@ class EDA:
 
     # plot scatter
     def gen_scatter(self, cnm: str):
-        df_sub = self.train_data.loc[:,["class_col",cnm]]
+        df_sub = self.train_data.loc[:, ["class_col", cnm]]
         plot_nm = cnm + " Scatter"
         p = (
             (ggplot(df_sub, aes(y="class_col", x=cnm)))
@@ -286,6 +295,7 @@ class EDA:
                     return 1
                 case False:
                     return 0
+
         # return original or replacement value
         def orig_or_replace(val, repl_val, check_list):
             match (val in check_list):
@@ -293,6 +303,7 @@ class EDA:
                     return repl_val
                 case False:
                     return val
+
         # find unique data set
         sorted_list = list(set(data))
         sorted_list.sort()
@@ -424,7 +435,9 @@ class EDA:
                                 # print("CHECKING TRUNCATION")
                                 # print(trunc_check[1].data.unique())
                                 # and original for reference
-                                self.gen_hist(pdat, cnm + "_cat" + " For Reference Only")
+                                self.gen_hist(
+                                    pdat, cnm + "_cat" + " For Reference Only"
+                                )
                             case False:
                                 # plot original category ohly
                                 self.gen_hist(pdat, cnm + "_cat" + " Used")

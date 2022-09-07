@@ -9,6 +9,8 @@ simp_binary_classify/.Rhistory
 simp_binary_classify/scratch.R
 simp_binary_classify/scratch.py
 graphics/*.png
+ai/
+*.class
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -10,7 +10,9 @@ spark_master = os.getenv("master", "local[*]")
 spark_name = os.getenv("spark_name", "no_env_file")
 
 conf = SparkConf()
-conf.setMaster(spark_master).setAppName(spark_name).set("spark.sql.debug.maxToStringFields", 2000)
+conf.setMaster(spark_master).setAppName(spark_name).set(
+    "spark.sql.debug.maxToStringFields", 2000
+)
 
 sc = SparkContext(conf=conf)
 spark = SparkSession(sc)

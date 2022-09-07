@@ -1,10 +1,16 @@
-from pyspark.ml.feature import OneHotEncoder, VectorAssembler, StringIndexer, StandardScaler
+from pyspark.ml.feature import (
+    OneHotEncoder,
+    VectorAssembler,
+    StringIndexer,
+    StandardScaler,
+)
 import pandas as pd
 from simp_binary_classify.spark import spark
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 def assemble_features(train_data):
     # get env details
@@ -17,7 +23,7 @@ def assemble_features(train_data):
             pd.DataFrame(
                 {
                     "row_num": [i for i in range(train_data.shape[0])],
-                    "yvals": train_data["class_col"]
+                    "yvals": train_data["class_col"],
                 }
             )
         )
@@ -30,9 +36,9 @@ def assemble_features(train_data):
             trainDF = spark.sql("SELECT * FROM train")
             testDF = spark.sql("SELECT * FROM test")
             str_indexer = StringIndexer()
-            cat_cols = list(filter(lambda x: x.find('cat') != -1, trainDF.columns[1:]))
+            cat_cols = list(filter(lambda x: x.find("cat") != -1, trainDF.columns[1:]))
             str_indexer.setInputCols(cat_cols)
-            cat_cols_ind = list(map(lambda x: x + '_Index', cat_cols))
+            cat_cols_ind = list(map(lambda x: x + "_Index", cat_cols))
             str_indexer.setOutputCols(cat_cols_ind)
             combDF = trainDF.union(testDF)
             indexer = str_indexer.fit(combDF)
@@ -41,7 +47,9 @@ def assemble_features(train_data):
             updated_combDF = updated_train_df.union(updated_test_df)
             ohe = OneHotEncoder()
             ohe.setInputCols(cat_cols_ind)
-            ohe.setOutputCols(list(map(lambda x: x[:(len(x)-6)] + '_classVec', cat_cols_ind)))
+            ohe.setOutputCols(
+                list(map(lambda x: x[: (len(x) - 6)] + "_classVec", cat_cols_ind))
+            )
             updated_ohe = ohe.fit(updated_combDF)
             updated_train_df2 = updated_ohe.transform(updated_train_df)
             updated_test_df2 = updated_ohe.transform(updated_test_df)
@@ -54,8 +62,7 @@ def assemble_features(train_data):
             trainDF = spark.sql("SELECT * FROM train")
             testDF = spark.sql("SELECT * FROM test")
             assembler = VectorAssembler(
-                inputCols=trainDF.columns[1:],
-                outputCol="vectorized_features"
+                inputCols=trainDF.columns[1:], outputCol="vectorized_features"
             )
             model_training = assembler.transform(trainDF)
             model_test = assembler.transform(testDF)
@@ -69,7 +76,9 @@ def assemble_features(train_data):
             updated_train_df.createOrReplaceTempView("model_training")
             updated_test_df.createOrReplaceTempView("model_testing")
             # collate
-            modelDataDF = spark.sql("SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num")
+            modelDataDF = spark.sql(
+                "SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num"
+            )
             modelDataDF.createOrReplaceTempView("model_train")
             # testDF = spark.sql("SELECT * FROM test")
             # model_testing = assembler.transform(testDF)
@@ -82,15 +91,16 @@ def assemble_features(train_data):
             trainDF = spark.sql("SELECT * FROM train")
             testDF = spark.sql("SELECT * FROM test")
             assembler = VectorAssembler(
-                inputCols=trainDF.columns[1:],
-                outputCol="features"
+                inputCols=trainDF.columns[1:], outputCol="features"
             )
             model_training = assembler.transform(trainDF)
             model_training.createOrReplaceTempView("model_training")
             model_testing = assembler.transform(testDF)
             model_testing.createOrReplaceTempView("model_testing")
             # collate
-            modelDataDF = spark.sql("SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num")
+            modelDataDF = spark.sql(
+                "SELECT a.row_num as id, a.yvals as label, b.features FROM yvals a LEFT JOIN model_training b ON a.row_num = b.row_num"
+            )
             modelDataDF.createOrReplaceTempView("model_train")
             # testDF = spark.sql("SELECT * FROM test")
             # model_testing = assembler.transform(testDF)
@@ -109,10 +119,6 @@ def assemble_features(train_data):
 #     encoder = OneHotEncoder(inputCol=c, outputCol = c + '_vec')
 #     onehotdata = encoder.fit(trainDF).transform(trainDF)
 #     onehotdata.show(10, truncate=False)
-
-
-
-
 
 
 # testDF = spark.sql("SELECT * FROM test")
